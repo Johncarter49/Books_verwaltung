@@ -1,0 +1,17 @@
+{
+  "name": "openui5-books",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "ui5 serve --config ui5.yaml --port 8080 --accept-remote-connections",
+    "build": "ui5 build --config ui5.yaml --clean-dest"
+  },
+  "devDependencies": {
+    "@ui5/cli": "3.3.2",
+    "typescript": "5.5.4",
+    "@types/node": "20.14.9"
+  }
+}
+
+
