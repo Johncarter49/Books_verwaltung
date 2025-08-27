@@ -3,6 +3,7 @@ sap.ui.define([
   "sap/m/Page",
   "sap/m/App",
   "sap/m/List",
+  "sap/m/StandardListItem",
   "sap/m/CustomListItem",
   "sap/m/HBox",
   "sap/m/Text",
@@ -14,8 +15,9 @@ sap.ui.define([
   "sap/m/ToolbarSpacer",
   "sap/m/VBox",
   "sap/ui/model/json/JSONModel",
-  "sap/m/MessageToast"
-], function(Button, Page, App, List, CustomListItem, HBox, Text, Dialog, Input, Label, DateRangeSelection, Toolbar, ToolbarSpacer, VBox, JSONModel, MessageToast) {
+  "sap/m/MessageToast",
+  "sap/m/MessageBox"
+], function(Button, Page, App, List, StandardListItem, CustomListItem, HBox, Text, Dialog, Input, Label, DateRangeSelection, Toolbar, ToolbarSpacer, VBox, JSONModel, MessageToast, MessageBox) {
   "use strict";
 
   var API_BASE = (window.API_BASE || "http://localhost:8001");
@@ -58,12 +60,34 @@ sap.ui.define([
   }
 
   function deleteBook(book) {
-    return fetch(API_BASE + "/books/" + book.id, { method: "DELETE" })
-      .then(fetchBooks);
+    return new Promise(function(resolve) {
+      MessageBox.confirm(
+        'Möchten Sie das Buch "' + book.title + '" von ' + book.author + ' wirklich löschen?',
+        {
+          title: "Buch löschen",
+          onClose: function(action) {
+            if (action === MessageBox.Action.OK) {
+              fetch(API_BASE + "/books/" + book.id, { method: "DELETE" })
+                .then(function(response) {
+                  if (response.ok) {
+                    MessageToast.show('Buch "' + book.title + '" wurde erfolgreich gelöscht');
+                    return fetchBooks();
+                  } else {
+                    MessageBox.error("Fehler beim Löschen des Buchs");
+                  }
+                })
+                .catch(function(error) {
+                  MessageBox.error("Fehler beim Löschen des Buchs");
+                });
+            }
+            resolve();
+          }
+        }
+      );
+    });
   }
 
   var list = new List({
-    mode: sap.m.ListMode.None,
     items: {
       path: "/books",
       template: new CustomListItem({
@@ -78,20 +102,26 @@ sap.ui.define([
                 new Text({ text: "{author}" })
               ]
             }),
+            new HBox({
+              items: [
+                new Text({ text: "{created_by}" }),
+                new Text({ text: " - " }),
+                new Text({ text: "{created_at}" })
+              ]
+            }),
             new Button({ text: "Bearbeiten", type: "Transparent", press: function(e){
               var ctx = e.getSource().getBindingContext();
               var book = ctx.getObject();
               createOrUpdateBook(book);
+            }}),
+            new Button({ text: "Löschen", type: "Transparent", press: function(e){
+              var ctx = e.getSource().getBindingContext();
+              var book = ctx.getObject();
+              deleteBook(book);
             }})
           ]
         })
       })
-    }
-  });
-
-  list.addEventDelegate({
-    onAfterRendering: function(){
-      // Einfaches Löschen: Kein Long-Press/Swipe; daher Lösung über Toolbar statt Info-Feld
     }
   });
 
@@ -100,19 +130,19 @@ sap.ui.define([
       var d = e.getSource();
       var from = d.getDateValue();
       var to = d.getSecondDateValue();
-      model.setProperty("/dateFrom", from || null);
-      model.setProperty("/dateTo", to || null);
+      model.setProperty("/dateFrom", from);
+      model.setProperty("/dateTo", to);
       fetchBooks();
     }
   });
 
   var searchInput = new Input({
     placeholder: "Suchen (Titel/Autor)",
-    submit: function(){ fetchBooks(); },
-    liveChange: function(e){ model.setProperty("/query", e.getSource().getValue()); }
+    submit: function() { fetchBooks(); },
+    liveChange: function(e) { model.setProperty("/query", e.getSource().getValue()); }
   });
 
-  var toolbar = new (sap.m.Toolbar)({
+  var toolbar = new Toolbar({
     content: [
       new Button({ text: "Aktualisieren", press: fetchBooks }),
       new ToolbarSpacer(),
@@ -120,13 +150,7 @@ sap.ui.define([
       dateRange,
       new ToolbarSpacer(),
       searchInput,
-      new Button({ text: "Löschen", type: "Negative", press: function(){
-        var sel = list.getSelectedItem();
-        if (!sel) { MessageToast.show("Bitte einen Eintrag auswählen"); return; }
-        var book = sel.getBindingContext().getObject();
-        deleteBook(book);
-      }}),
-      new Button({ text: "Hinzufügen", type: "Emphasized", press: function(){ createOrUpdateBook(); } })
+      new Button({ text: "Hinzufügen", type: "Emphasized", press: function() { createOrUpdateBook(); } })
     ]
   });
 

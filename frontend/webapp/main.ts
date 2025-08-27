@@ -2,7 +2,7 @@ import Button from "sap/m/Button";
 import Page from "sap/m/Page";
 import App from "sap/m/App";
 import List from "sap/m/List";
-import StandardListItem from "sap/m/StandardListItem";
+import ObjectListItem from "sap/m/ObjectListItem";
 import Dialog from "sap/m/Dialog";
 import Input from "sap/m/Input";
 import Label from "sap/m/Label";
@@ -15,6 +15,7 @@ import ObjectAttribute from "sap/m/ObjectAttribute";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import MessageToast from "sap/m/MessageToast";
 import MessageBox from "sap/m/MessageBox";
+import ObjectStatus from "sap/m/ObjectStatus";
 
 type Book = {
   id: number;
@@ -24,7 +25,7 @@ type Book = {
   created_by: string;
 };
 
-const API_BASE = (window as any).API_BASE || "http://localhost:8000";
+const API_BASE = (window as any).API_BASE || "http://localhost:8001";
 
 const model = new JSONModel({ books: [], query: "", dateFrom: null, dateTo: null });
 
@@ -91,26 +92,58 @@ async function deleteBook(book: Book) {
 const list = new List({
   items: {
     path: "/books",
-    template: new StandardListItem({
+    template: new ObjectListItem({
       title: "{title}",
-      description: "{author}",
-      info: {
-        path: "created_by",
-        formatter: (createdBy: string, book: any) => {
-          const creator = createdBy || "Unbekannt";
-          const createdDate = book.created_at ? new Date(book.created_at).toLocaleDateString("de-DE", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit"
-          }) : "Unbekannt";
-          return `Erstellt von: ${creator} | ${createdDate}`;
-        }
-      },
-      type: "Active",
+      number: "{author}",
+      attributes: [
+        new ObjectAttribute({
+          title: "Erstellt von",
+          text: "{created_by}"
+        }),
+        new ObjectAttribute({
+          title: "Erstellt am",
+          text: {
+            path: "created_at",
+            formatter: (dateString: string) => {
+              if (!dateString) return "Unbekannt";
+              const date = new Date(dateString);
+              return date.toLocaleDateString("de-DE", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+              });
+            }
+          }
+        })
+      ],
+      firstStatus: new ObjectStatus({
+        text: "Verfügbar",
+        state: "Success"
+      }),
       press: function(oEvent) {
         const book = oEvent.getSource().getBindingContext().getObject();
         createOrUpdateBook(book);
-      }
+      },
+      actions: [
+        new Button({
+          text: "Bearbeiten",
+          type: "Transparent",
+          icon: "sap-icon://edit",
+          press: function(oEvent) {
+            const book = oEvent.getSource().getParent().getBindingContext().getObject();
+            createOrUpdateBook(book);
+          }
+        }),
+        new Button({
+          text: "Löschen",
+          type: "Transparent",
+          icon: "sap-icon://delete",
+          press: function(oEvent) {
+            const book = oEvent.getSource().getParent().getBindingContext().getObject();
+            deleteBook(book);
+          }
+        })
+      ]
     })
   }
 });
