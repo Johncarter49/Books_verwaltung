@@ -91,9 +91,8 @@ sap.ui.define([
     items: {
       path: "/books",
       template: new CustomListItem({
-        content: new HBox({
+        content: new VBox({
           width: "100%",
-          justifyContent: "SpaceBetween",
           items: [
             new HBox({
               items: [
@@ -106,19 +105,38 @@ sap.ui.define([
               items: [
                 new Text({ text: "{created_by}" }),
                 new Text({ text: " - " }),
-                new Text({ text: "{created_at}" })
+                new Text({ 
+                  text: {
+                    path: "created_at",
+                    formatter: function(date) {
+                      if (date) {
+                        var d = new Date(date);
+                        var day = d.getDate().toString().padStart(2, '0');
+                        var month = (d.getMonth() + 1).toString().padStart(2, '0');
+                        var year = d.getFullYear();
+                        return day + "." + month + "." + year;
+                      }
+                      return "";
+                    }
+                  }
+                })
               ]
             }),
-            new Button({ text: "Bearbeiten", type: "Transparent", press: function(e){
-              var ctx = e.getSource().getBindingContext();
-              var book = ctx.getObject();
-              createOrUpdateBook(book);
-            }}),
-            new Button({ text: "Löschen", type: "Transparent", press: function(e){
-              var ctx = e.getSource().getBindingContext();
-              var book = ctx.getObject();
-              deleteBook(book);
-            }})
+            new HBox({
+              justifyContent: "End",
+              items: [
+                new Button({ text: "Bearbeiten", type: "Transparent", press: function(e){
+                  var ctx = e.getSource().getBindingContext();
+                  var book = ctx.getObject();
+                  createOrUpdateBook(book);
+                }}),
+                new Button({ text: "Löschen", type: "Transparent", press: function(e){
+                  var ctx = e.getSource().getBindingContext();
+                  var book = ctx.getObject();
+                  deleteBook(book);
+                }})
+              ]
+            })
           ]
         })
       })
@@ -156,6 +174,7 @@ sap.ui.define([
 
   var page = new Page({
     title: "Bücher",
+    titleSize: "H1",
     content: [toolbar, list]
   });
 
